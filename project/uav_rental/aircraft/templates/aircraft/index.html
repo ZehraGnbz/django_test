@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css">
+    <title>Aircraft Inventory</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Aircraft Inventory</h1>
+
+        <!-- Form to add new part asynchronously -->
+        <form id="part-form">
+            <div class="form-group">
+                <label for="name">Part Name</label>
+                <input type="text" id="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="aircraft_type">Aircraft Type</label>
+                <select id="aircraft_type" class="form-control">
+                    <option value="TB2">TB2</option>
+                    <option value="TB3">TB3</option>
+                    <option value="AKINCI">AKINCI</option>
+                    <option value="KIZILELMA">KIZILELMA</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Part</button>
+        </form>
+
+        <div id="response"></div>
+
+        <table id="aircraft-list" class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Aircraft Type</th>
+                    <th>Parts</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aircraft data will be injected here dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables
+            $('#aircraft-list').DataTable();
+
+            // Function to add a part asynchronously
+            $('#part-form').on('submit', function(event) {
+                event.preventDefault();
+                var name = $('#name').val();
+                var aircraft_type = $('#aircraft_type').val();
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/api/parts/',
+                    data: {
+                        name: name,
+                        aircraft_type: aircraft_type,
+                        quantity: 1,
+                    },
+                    success: function(response) {
+                        $('#response').html('<div class="alert alert-success">Part added successfully!</div>');
+                        $('#part-form')[0].reset();
+                        fetchAircrafts();  // Update the aircraft list after adding a part
+                    },
+                    error: function(error) {
+                        $('#response').html('<div class="alert alert-danger">Error adding part.</div>');
+                    }
+                });
+            });
+
+            // Function to fetch and display the aircraft list
+            function fetchAircrafts() {
+                $.ajax({
+                    url: '/api/aircrafts/',
+                    method: 'GET',
+                    success: function(response) {
+                        var aircraft_list = '';
+                        response.forEach(function(aircraft) {
+                            aircraft_list += `
+                                <tr>
+                                    <td>${aircraft.id}</td>
+                                    <td>${aircraft.type}</td>
+                                    <td>
+                                        Wing: ${aircraft.wing.name}, 
+                                        Body: ${aircraft.body.name}, 
+                                        Tail: ${aircraft.tail.name}, 
+                                        Avionic: ${aircraft.avionic.name}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#aircraft-list tbody').html(aircraft_list);
+                        $('#aircraft-list').DataTable().destroy();  // Destroy and reinitialize DataTable
+                        $('#aircraft-list').DataTable();  // Reinitialize DataTable to apply sorting, searching
+                    },
+                    error: function(error) {
+                        console.error("Error fetching aircraft data");
+                    }
+                });
+            }
+
+            // Fetch aircrafts on page load
+            fetchAircrafts();
+        });
+    </script>
+</body>
+</html>
